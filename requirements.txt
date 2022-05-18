@@ -1,0 +1,8 @@
+# Data
+yfinance
+
+# Visualization
+matplotlib
+
+# Jupyter
+jupyter
