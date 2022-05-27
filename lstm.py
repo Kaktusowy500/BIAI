@@ -1,32 +1,32 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable 
 
-class CustomLSTM(nn.Module):
-    def __init__(self, num_classes, input_size, hidden_size, num_layers, seq_length):
-        super(CustomLSTM, self).__init__()
-        self.num_classes = num_classes
-        self.num_layers = num_layers 
-        self.input_size = input_size
+
+class LSTM(nn.Module):
+    """
+    input_size - will be 1 in this example since we have only 1 predictor (a sequence of previous values)
+    hidden_size - Can be chosen to dictate how much hidden "long term memory" the network will have
+    output_size - This will be equal to the prediciton_periods input to get_x_y_pairs
+    """
+
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTM, self).__init__()
         self.hidden_size = hidden_size
-        self.seq_length = seq_length
 
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                          num_layers=num_layers, batch_first=True) 
-        self.fc_1 =  nn.Linear(hidden_size, 128) 
-        self.fc = nn.Linear(128, num_classes) 
+        self.lstm = nn.LSTM(input_size, hidden_size)
 
-        self.relu = nn.ReLU()
-    
-    def forward(self,x):
-        h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #hidden state
-        c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #internal state
-        # Propagate input through LSTM
-        output, (hn, cn) = self.lstm(x, (h_0, c_0)) #lstm with input, hidden, and internal state
-        hn = hn.view(-1, self.hidden_size) #reshaping the data for Dense layer next
-        out = self.relu(hn)
-        out = self.fc_1(out)
-        out = self.relu(out) 
-        out = self.fc(out) #Final Output
-        return out
- 
+        self.linear = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, hidden=None):
+        if hidden == None:
+            self.hidden = (torch.zeros(1, 1, self.hidden_size),
+                           torch.zeros(1, 1, self.hidden_size))
+        else:
+            self.hidden = hidden
+
+        lstm_out, self.hidden = self.lstm(x.view(len(x), 1, -1),
+                                          self.hidden)
+
+        predictions = self.linear(lstm_out.view(len(x), -1))
+
+        return predictions[-1], self.hidden
