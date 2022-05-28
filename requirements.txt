@@ -1,8 +1,14 @@
 # Data
 yfinance
+numpy==1.22.3
+pandas==1.4.2
+scikit_learn==1.1.1
 
 # Visualization
 matplotlib
 
 # Jupyter
 jupyter
+
+# NN
+torch==1.11.0
