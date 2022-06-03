@@ -18,6 +18,19 @@ class StockData:
         self.average_price = total_val / total_amount
         self.amount = total_amount
 
+    def sub(self, amount):
+        if amount < 0:
+            value = self.amount * self.average_price
+            self.amount = 0
+            return value
+
+        if amount > self.amount:
+            raise ValueError(f"Too low stock amount")
+
+        value = amount * self.average_price
+        self.amount -= amount
+        return value
+
 
 STOCK_NAME = "AAAU"
 
@@ -43,14 +56,24 @@ class Trader:
         if stock_name in self.bought_stocks:
             self.bought_stocks[stock_name].add(amount_of_stock, actual_price)
         else:
-            self.bought_stocks[stock_name] = StockData(amount_of_stock, actual_price)
+            self.bought_stocks[stock_name] = StockData(
+                amount_of_stock, actual_price)
 
         print(f"Bought {stock_name} with {money_to_spend}")
 
+    def sell_stock(self, stock_name, amount):
+        if stock_name in self.bought_stocks:
+            value = self.bought_stocks[stock_name].sub(amount)
+            self.money += value
+            print(f"Sold {amount} of {stock_name} of value {value}")
+
     def make_decision(self, stock_name, predictions):
-        if self.money > 0: 
-            if np.sum(predictions) > self.CHANGE_TRESH:
+        if np.sum(predictions) > self.CHANGE_TRESH:
+            if self.money > 0:
                 self.buy_stock(stock_name, self.money)
+
+        elif np.sum(predictions) < -self.CHANGE_TRESH:
+            self.sell_stock(stock_name, -1)
 
     def evaluate_strategy(self, start_date, end_date=None):
         self.current_date = start_date
