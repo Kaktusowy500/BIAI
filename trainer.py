@@ -65,16 +65,25 @@ class Trainer():
             predictions, _ = self.model(data_period)
         return predictions
 
+    def cuda(self):
+        self.model.cuda()
+
 
 if __name__ == "__main__":
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     data_prep = DataPrep()
+    trainer= Trainer()
+
+    if torch.cuda.is_available():
+        data_prep.cuda()
+        trainer.cuda()
+
     data_prep.read_and_parse_df(DF_PATH)
     train, test = data_prep.train_test(TEST_PERIODS)
     train_scaled = data_prep.scale_data(train)
     x_train, y_train = data_prep.get_x_y_pairs(train_scaled, TRAIN_PERIODS, TEST_PERIODS)
 
-    trainer= Trainer()
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
     predictions = trainer.predict(inference_period)

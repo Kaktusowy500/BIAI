@@ -7,6 +7,7 @@ class DataPrep:
     def __init__(self):
         self.df = None
         self.scaler = MinMaxScaler()
+        self.is_cuda = False
 
     def read_and_parse_df(self, path):
         """read data frame from csv and extract price change"""
@@ -17,6 +18,14 @@ class DataPrep:
         """split df to train and test sets"""
         train = self.df[:-test_periods].values
         test = self.df[-test_periods:].values
+
+        # if self.is_cuda:
+        #     train = torch.FloatTensor(train)
+        #     test = torch.FloatTensor(test)
+
+        #     train = train.cuda()
+        #     test = test.cuda()
+
         return train, test
 
     def scale_data(self, data_set):
@@ -24,6 +33,10 @@ class DataPrep:
         self.scaler.fit(data_set)
         scaled_data = self.scaler.transform(data_set)
         scaled_data = torch.FloatTensor(scaled_data)
+
+        if self.is_cuda:
+            scaled_data = scaled_data.cuda()
+
         return scaled_data.view(-1)
 
     def get_x_y_pairs(self, train_scaled, train_periods, prediction_periods):
@@ -34,4 +47,11 @@ class DataPrep:
         x_train = torch.stack(x_train)
         y_train = torch.stack(y_train)
 
+        if self.is_cuda:
+            x_train = x_train.cuda()
+            y_train = y_train.cuda()
+
         return x_train, y_train
+
+    def cuda(self):
+        self.is_cuda = True
