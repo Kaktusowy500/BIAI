@@ -2,55 +2,54 @@ from trader import StockData
 import pytest
 
 
-def test_add_amount_to_zeros_data():
+@pytest.mark.parametrize("amount_add, curr_price", [(100, 20), (0, 0), (1.5, 0)])
+def test_add_amount_to_zeros_data(amount_add, curr_price):
     stock_data = StockData(0, 0)
-    AMOUNT = 100
-    PRICE = 20.5
 
-    stock_data.add(amount=AMOUNT, price=PRICE)
+    stock_data.add(amount=amount_add, price=curr_price)
 
-    assert stock_data.amount == AMOUNT
-    assert stock_data.average_price == PRICE
+    assert stock_data.amount == amount_add
+    assert stock_data.average_price == curr_price
 
 
-def test_add_amount_to_already_populated_data():
+@pytest.mark.parametrize("amount_add, curr_price", [(100, 20), (0, 0), (1.5, 0)])
+def test_add_amount_to_already_populated_data(amount_add, curr_price):
     PREV_AMOUNT = 10
     PREV_AVG_PRICE = 30
     stock_data = StockData(PREV_AMOUNT, PREV_AVG_PRICE)
-    AMOUNT = 20
-    PRICE = 5
 
-    stock_data.add(amount=AMOUNT, price=PRICE)
+    stock_data.add(amount=amount_add, price=curr_price)
 
-    total_amount = AMOUNT+PREV_AMOUNT
+    total_amount = amount_add + PREV_AMOUNT
     assert stock_data.amount == total_amount
     assert stock_data.average_price == pytest.approx((
-        PRICE*AMOUNT+PREV_AVG_PRICE*PREV_AMOUNT)/total_amount)
+        curr_price * amount_add + PREV_AVG_PRICE * PREV_AMOUNT) / total_amount)
 
 
 def test_sub_total_amount():
     PREV_AMOUNT = 10
     PREV_AVG_PRICE = 30
     stock_data = StockData(PREV_AMOUNT, PREV_AVG_PRICE)
+    CURRENT_PRICE = 20
 
-    value = stock_data.sub(-1)
+    value = stock_data.sub(-1, CURRENT_PRICE)
 
     assert stock_data.amount == 0
     assert stock_data.average_price == PREV_AVG_PRICE
-    assert value == PREV_AMOUNT * PREV_AVG_PRICE
+    assert value == PREV_AMOUNT * CURRENT_PRICE
 
 
-def test_sub_part_of_total_amount():
+@pytest.mark.parametrize("amount_sub, curr_price", [(10, 30), (10, 0), (5.2, 3.2), (0, 2), (2, 0)])
+def test_sub_part_of_total_amount(amount_sub, curr_price):
     PREV_AMOUNT = 10
     PREV_AVG_PRICE = 30
     stock_data = StockData(PREV_AMOUNT, PREV_AVG_PRICE)
-    AMOUNT_TO_SUB = 5.5
 
-    value = stock_data.sub(AMOUNT_TO_SUB)
+    value = stock_data.sub(amount_sub, curr_price)
 
-    assert stock_data.amount == PREV_AMOUNT - AMOUNT_TO_SUB
+    assert stock_data.amount == PREV_AMOUNT - amount_sub
     assert stock_data.average_price == PREV_AVG_PRICE
-    assert value == AMOUNT_TO_SUB * PREV_AVG_PRICE
+    assert value == amount_sub * curr_price
 
 
 def test_sub_greater_than_total_amount():
@@ -58,6 +57,7 @@ def test_sub_greater_than_total_amount():
     PREV_AVG_PRICE = 30
     stock_data = StockData(PREV_AMOUNT, PREV_AVG_PRICE)
     AMOUNT_TO_SUB = 15
-    
+    CURRENT_PRICE = 20
+
     with pytest.raises(ValueError):
-        value = stock_data.sub(AMOUNT_TO_SUB)
+        value = stock_data.sub(AMOUNT_TO_SUB, CURRENT_PRICE)

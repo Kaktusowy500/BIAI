@@ -13,21 +13,22 @@ class StockData:
         self.average_price = price
 
     def add(self, amount, price):
-        total_val = self.amount * self.average_price + amount * price
-        total_amount = self.amount + amount
-        self.average_price = total_val / total_amount
-        self.amount = total_amount
+        if amount > 0:
+            total_val = self.amount * self.average_price + amount * price
+            total_amount = self.amount + amount
+            self.average_price = total_val / total_amount
+            self.amount = total_amount
 
-    def sub(self, amount):
+    def sub(self, amount, price):
         if amount < 0:
-            value = self.amount * self.average_price
+            value = self.amount * price
             self.amount = 0
             return value
 
         if amount > self.amount:
             raise ValueError(f"Too low stock amount")
 
-        value = amount * self.average_price
+        value = amount * price
         self.amount -= amount
         return value
 
@@ -63,7 +64,8 @@ class Trader:
 
     def sell_stock(self, stock_name, amount):
         if stock_name in self.bought_stocks:
-            value = self.bought_stocks[stock_name].sub(amount)
+            actual_price = self.stocks_prices.loc[self.current_date]["Close"]
+            value = self.bought_stocks[stock_name].sub(amount, actual_price)
             self.money += value
             print(f"Sold {amount} of {stock_name} of value {value}")
 
