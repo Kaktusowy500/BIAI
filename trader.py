@@ -1,9 +1,9 @@
-from cv2 import add
-from matplotlib.pyplot import hist
 import numpy as np
 import pandas as pd
-from typing import List, Dict
+from typing import Dict
 from model_mock import ModelMock
+import matplotlib.pyplot as plt
+import datetime as dt
 from trainer import TEST_PERIODS, TRAIN_PERIODS
 
 
@@ -32,6 +32,9 @@ class StockData:
         self.amount -= amount
         return value
 
+    def get_current_value(self, curr_price):
+        return self.amount * curr_price
+
 
 STOCK_NAME = "AAAU"
 
@@ -45,6 +48,7 @@ class Trader:
         self.money = money
         self.stocks_prices = stock_prices
         self.current_date = None
+        self.wallet_history = pd.DataFrame(columns=["Cash", "Stocks_value", "Total_value"],  index=pd.to_datetime([]))
 
     def buy_stock(self, stock_name, money_to_spend):
         if(money_to_spend > self.money):
@@ -77,6 +81,15 @@ class Trader:
         elif np.sum(predictions) < -self.CHANGE_TRESH:
             self.sell_stock(stock_name, -1)
 
+    def calc_and_save_balance(self):
+        stocks_value = 0
+        for stockname in self.bought_stocks.keys():
+            actual_price = self.stocks_prices.loc[self.current_date]["Close"]  # Temporary for only one stock
+            stocks_value += self.bought_stocks[stockname].get_current_value(actual_price)
+
+        balance = {"Cash": self.money, "Stocks_value": stocks_value, "Total_value": stocks_value + self.money}
+        self.wallet_history.loc[pd.to_datetime(self.current_date)] = balance
+
     def evaluate_strategy(self, start_date, end_date=None):
         self.current_date = start_date
         while(True):
@@ -86,6 +99,7 @@ class Trader:
             history_for_train = history[-20:]
             predictions = self.model(history_for_train)
             self.make_decision(STOCK_NAME, predictions)
+            self.calc_and_save_balance()
 
             next_period = self.stocks_prices.loc[self.current_date:]
 
@@ -95,8 +109,21 @@ class Trader:
             self.current_date = next_period.iloc[TEST_PERIODS].name
             print(self.current_date)
 
+def plot_results(df):
+    x = [dt.datetime.date(d) for d in df.index]
+    fig = plt.figure(figsize=(10, 5))
+    plt.title('Total wallet value in time')
+    plt.ylabel('Value')
+    plt.grid(True)
+    plt.plot(x,
+           df["Total_value"].to_numpy(),
+           "b-")
+    plt.savefig('plot_wallet', dpi=600)
+
 
 if __name__ == "__main__":
     df = pd.read_csv('raw_data/AAAU.csv', index_col='Date', parse_dates=True)
     trader = Trader(10000, df)
     trader.evaluate_strategy("2021-01-29")
+    print(trader.wallet_history)
+    plot_results(trader.wallet_history)
