@@ -1,5 +1,6 @@
 import random
 class ModelMock:
+    """Class used for testing, will be replace by a real NN model"""
     def __init__(self, predicted):
         self.predicted = predicted 
         pass
