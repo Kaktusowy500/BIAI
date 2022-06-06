@@ -1,15 +1,15 @@
-
-import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import datetime as dt
 import matplotlib.pyplot as plt
+
 from data_prep import DataPrep
 from lstm import LSTM
+from datetime import datetime
 
-NUM_EPOCHS = 400
+NUM_EPOCHS = 100
 LEARNING_RATE = 0.002
 HIDDEN_SIZE = 50  # number of features in hidden state
 
@@ -65,6 +65,12 @@ class Trainer():
             predictions, _ = self.model(data_period)
         return predictions
 
+    def save(self, path):
+        torch.save(self.model.state_dict(), path)
+
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path))
+
     def cuda(self):
         self.model.cuda()
 
@@ -86,8 +92,12 @@ if __name__ == "__main__":
 
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
+    model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
+    trainer.save(f'models/${model_name}')
+    trainer.load(f'models/${model_name}')
     predictions = trainer.predict(inference_period)
 
     # Apply inverse transform to undo scaling
+    predictions = predictions.cpu()
     predictions = data_prep.scaler.inverse_transform(np.array(predictions.reshape(-1, 1)))
     plot_results(data_prep.df, predictions)
