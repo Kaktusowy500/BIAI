@@ -1,3 +1,4 @@
+from unittest import result
 import numpy as np
 import pandas as pd
 from typing import Dict
@@ -5,6 +6,7 @@ from model_mock import ModelMock
 import matplotlib.pyplot as plt
 import datetime as dt
 from trainer import TEST_PERIODS, TRAIN_PERIODS
+from strategies import TreshStrategy, Decision
 
 
 class StockData:
@@ -43,15 +45,16 @@ STOCK_NAME = "AAAU"
 
 
 class Trader:
-    CHANGE_TRESH = 2
 
-    def __init__(self, money, stock_prices: pd.DataFrame):
+    def __init__(self, money, stock_prices: pd.DataFrame, strategy):
         self.model = ModelMock([1.3, -2.3, 2.1, 1.9, 1.1])
         self.bought_stocks: Dict[str, StockData] = {}
         self.money = money
         self.stocks_prices = stock_prices
         self.current_date = None
+        self.strategy = strategy
         self.wallet_history = pd.DataFrame(columns=["Cash", "Stocks_value", "Total_value"], index=pd.to_datetime([]))
+
 
     def buy_stock(self, stock_name, money_to_spend):
         """Buys stock with defined amount of money"""
@@ -80,12 +83,13 @@ class Trader:
 
     def make_decision(self, stock_name, predictions):
         """Decides about buying, selling and holding basing on predictions"""
-        if np.sum(predictions) > self.CHANGE_TRESH:
+        result = self.strategy.execute(STOCK_NAME, predictions, self.stocks_prices)
+        if result == Decision.buy:
             if self.money > 0:
                 self.buy_stock(stock_name, self.money)
-
-        elif np.sum(predictions) < -self.CHANGE_TRESH:
+        elif result == Decision.sell:
             self.sell_stock(stock_name, -1)
+
 
     def calc_and_save_balance(self):
         """Calcs actual wallet balance and saves into dataframe"""
@@ -133,7 +137,7 @@ def plot_results(df):
 
 if __name__ == "__main__":
     df = pd.read_csv('raw_data/AAAU.csv', index_col='Date', parse_dates=True)
-    trader = Trader(10000, df)
+    trader = Trader(10000, df, TreshStrategy(2))
     trader.evaluate_strategy("2021-01-29")
     print(trader.wallet_history)
     plot_results(trader.wallet_history)

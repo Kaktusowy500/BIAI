@@ -1,10 +1,11 @@
+import imp
 import trader
 import pandas as pd
+from strategies import TreshStrategy
 
-
+# Test for a make decision and integration with TreshStrategy
 def test_make_decision_buy_with_entire_money(mocker):
-    tr = trader.Trader(10000, pd.DataFrame())
-    tr.CHANGE_TRESH = 2
+    tr = trader.Trader(10000, pd.DataFrame(), TreshStrategy(2))
     mock = mocker.patch('trader.Trader.buy_stock')
     STOCK_NAME = "AAAU"
 
@@ -14,8 +15,7 @@ def test_make_decision_buy_with_entire_money(mocker):
 
 
 def test_make_decision_sell_stock_entire_amount(mocker):
-    tr = trader.Trader(10000, pd.DataFrame())
-    tr.CHANGE_TRESH = 2
+    tr = trader.Trader(10000, pd.DataFrame(),TreshStrategy(2))
     mock = mocker.patch('trader.Trader.sell_stock')
     STOCK_NAME = "AAAU"
 
@@ -24,8 +24,7 @@ def test_make_decision_sell_stock_entire_amount(mocker):
     mock.assert_called_once_with(STOCK_NAME, -1)
 
 def test_make_decision_hold(mocker):
-    tr = trader.Trader(10000, pd.DataFrame())
-    tr.CHANGE_TRESH = 2
+    tr = trader.Trader(10000, pd.DataFrame(), TreshStrategy(2))
     mock_sell = mocker.patch('trader.Trader.sell_stock')
     mock_buy = mocker.patch('trader.Trader.buy_stock')
     STOCK_NAME = "AAAU"
