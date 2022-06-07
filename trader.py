@@ -6,7 +6,7 @@ from model_mock import ModelMock
 import matplotlib.pyplot as plt
 import datetime as dt
 from trainer import TEST_PERIODS, TRAIN_PERIODS
-from strategies import TreshStrategy, Decision
+from strategies import Strategy, TreshStrategy, Decision, MovingAvgStrategy
 
 
 class StockData:
@@ -46,7 +46,7 @@ STOCK_NAME = "AAAU"
 
 class Trader:
 
-    def __init__(self, money, stock_prices: pd.DataFrame, strategy):
+    def __init__(self, money, stock_prices: pd.DataFrame, strategy : Strategy):
         self.model = ModelMock([1.3, -2.3, 2.1, 1.9, 1.1])
         self.bought_stocks: Dict[str, StockData] = {}
         self.money = money
@@ -83,7 +83,7 @@ class Trader:
 
     def make_decision(self, stock_name, predictions):
         """Decides about buying, selling and holding basing on predictions"""
-        result = self.strategy.execute(STOCK_NAME, predictions, self.stocks_prices)
+        result = self.strategy.execute(predictions, self.stocks_prices, self.current_date)
         if result == Decision.buy:
             if self.money > 0:
                 self.buy_stock(stock_name, self.money)
@@ -137,7 +137,7 @@ def plot_results(df):
 
 if __name__ == "__main__":
     df = pd.read_csv('raw_data/AAAU.csv', index_col='Date', parse_dates=True)
-    trader = Trader(10000, df, TreshStrategy(2))
+    trader = Trader(10000, df, MovingAvgStrategy(1, 5, 15))
     trader.evaluate_strategy("2021-01-29")
     print(trader.wallet_history)
     plot_results(trader.wallet_history)

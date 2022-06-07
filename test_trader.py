@@ -1,4 +1,3 @@
-import imp
 import trader
 import pandas as pd
 from strategies import TreshStrategy
