@@ -1,5 +1,3 @@
-from unittest import result
-import numpy as np
 import pandas as pd
 from typing import Dict
 from model_mock import ModelMock
@@ -46,7 +44,7 @@ STOCK_NAME = "AAAU"
 
 class Trader:
 
-    def __init__(self, money, stock_prices: pd.DataFrame, strategy : Strategy):
+    def __init__(self, money, stock_prices: pd.DataFrame, strategy: Strategy):
         self.model = ModelMock([1.3, -2.3, 2.1, 1.9, 1.1])
         self.bought_stocks: Dict[str, StockData] = {}
         self.money = money
@@ -54,7 +52,6 @@ class Trader:
         self.current_date = None
         self.strategy = strategy
         self.wallet_history = pd.DataFrame(columns=["Cash", "Stocks_value", "Total_value"], index=pd.to_datetime([]))
-
 
     def buy_stock(self, stock_name, money_to_spend):
         """Buys stock with defined amount of money"""
@@ -89,7 +86,6 @@ class Trader:
                 self.buy_stock(stock_name, self.money)
         elif result == Decision.sell:
             self.sell_stock(stock_name, -1)
-
 
     def calc_and_save_balance(self):
         """Calcs actual wallet balance and saves into dataframe"""
