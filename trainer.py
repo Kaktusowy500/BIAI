@@ -9,7 +9,7 @@ from data_prep import DataPrep
 from lstm import LSTM
 from datetime import datetime
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 200
 LEARNING_RATE = 0.002
 HIDDEN_SIZE = 50  # number of features in hidden state
 
@@ -42,7 +42,7 @@ def plot_results(df, predictions):
 
 class Trainer():
     def __init__(self):
-        self.model = LSTM(input_size=1, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
+        self.model = LSTM(input_size=2, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
 
@@ -93,11 +93,11 @@ if __name__ == "__main__":
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
     model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
-    trainer.save(f'models/${model_name}')
-    trainer.load(f'models/${model_name}')
+    trainer.save(f'models/{model_name}')
+    trainer.load(f'models/{model_name}')
     predictions = trainer.predict(inference_period)
 
-    # Apply inverse transform to undo scaling
     predictions = predictions.cpu()
-    predictions = data_prep.scaler.inverse_transform(np.array(predictions.reshape(-1, 1)))
-    plot_results(data_prep.df, predictions)
+    predictions = np.array(predictions).reshape(-1, 1)
+    predictions = data_prep.scaler_price.inverse_transform(predictions)
+    plot_results(data_prep.df["Price %"], predictions)

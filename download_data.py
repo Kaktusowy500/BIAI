@@ -10,7 +10,7 @@ try:
     tickers_str = ' '.join(tickers)
 
     for ticker in tickers:
-        yf_df = yf.download(ticker, start='2021-01-01', end="2021-12-30")
+        yf_df = yf.download(ticker, start='2019-01-01', end="2021-12-30")
         yf_df.to_csv('raw_data/' + ticker + '.csv')
 
 except FileExistsError:
