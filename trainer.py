@@ -124,7 +124,6 @@ if __name__ == "__main__":
     train_scaled = data_prep.scale_data(train)
     x_train, y_train = data_prep.get_x_y_pairs(train_scaled, TRAIN_PERIODS, TEST_PERIODS)
 
-    trainer = Trainer()
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
     model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
