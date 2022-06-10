@@ -22,9 +22,11 @@ class TreshStrategy(Strategy):
         self.change_tresh = change_tresh
 
     def execute(self, predictions, stock_history, current_date) -> Decision:
-        if np.sum(predictions) > self.change_tresh:
+        sum = np.sum(predictions)
+        print(sum)
+        if sum > self.change_tresh:
             return Decision.buy
-        elif np.sum(predictions) < -self.change_tresh:
+        elif sum < -self.change_tresh:
             return Decision.sell
 
         return Decision.hold
@@ -50,8 +52,8 @@ class MovingAvgStrategy(Strategy):
 
     def moving_avg_prediction(self, df):
         df = df.loc[:self.current_date].copy()
-        df['long_MA'] = df['Close'].rolling(int(self.long_period)).mean()
-        df['short_MA'] = df['Close'].rolling(int(self.short_period)).mean()
+        df['long_MA'] = df['Price'].rolling(int(self.long_period)).mean()
+        df['short_MA'] = df['Price'].rolling(int(self.short_period)).mean()
         df['crosszero'] = np.where(df['short_MA'] > df['long_MA'], 1.0, 0.0)
         df['direction'] = df['crosszero'].diff()
         if df['direction'].iloc[-self.short_period:].isin([1.0]).any().any():

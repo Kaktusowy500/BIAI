@@ -13,6 +13,7 @@ try:
 
         if yf_df.shape[0] >= 240 * 3:
             yf_df = yf_df[["Date", "Close", "Volume"]]
+            yf_df["Price"] = yf_df["Close"]
             yf_df.rename(columns={"Close": "Price %", "Volume": "Volume %"}, inplace=True)
 
             prices = yf_df["Price %"].to_numpy()

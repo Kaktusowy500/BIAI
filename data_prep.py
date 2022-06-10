@@ -13,10 +13,17 @@ class DataPrep:
         self.scaler_volume = MinMaxScaler()
         self.is_cuda = False
 
-    def read_and_parse_df(self, path):
+    def read_and_parse_df(self, path, dt_from=None, dt_to=None):
         """read data frame from csv and extract price change"""
         df = pd.read_csv(path, index_col='Date', parse_dates=True)
-        self.df = df.iloc[:, 1:3]
+
+        if dt_to:
+            df = df.loc[:dt_to]
+        if dt_from:
+            df = df.loc[dt_from:]
+
+        self.df = df
+        return self.df
 
     def train_test(self, test_periods):
         """split df to train and test sets"""
@@ -27,8 +34,8 @@ class DataPrep:
 
     def scale_data(self, data_set):
         """Scale data 0-1 range and convert to flat tensor"""
-        price = data_set[:, 0].reshape(-1, 1)
-        volume =  data_set[:, 1].reshape(-1, 1)
+        price = data_set[:, 1].reshape(-1, 1)
+        volume =  data_set[:, 2].reshape(-1, 1)
         self.scaler_price.fit(price)
         self.scaler_volume.fit(volume)
         scaled_price = np.array(self.scaler_price.transform(price))

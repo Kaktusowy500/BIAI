@@ -1,11 +1,15 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import datetime as dt
+import torch
+
 from typing import Dict
 from model_mock import ModelMock
-import matplotlib.pyplot as plt
-import datetime as dt
-from trainer import TEST_PERIODS, TRAIN_PERIODS
+from lstm import LSTM
+from trainer import TEST_PERIODS, TRAIN_PERIODS, HIDDEN_SIZE, INPUT_SIZE, Trainer
 from strategies import Strategy, TreshStrategy, Decision, MovingAvgStrategy
-
+from data_prep import DataPrep
 
 class StockData:
     def __init__(self, amount, price):
@@ -44,21 +48,26 @@ STOCK_NAME = "AAAU"
 
 class Trader:
 
-    def __init__(self, money, stock_prices: pd.DataFrame, strategy: Strategy):
-        self.model = ModelMock([1.3, -2.3, 2.1, 1.9, 1.1])
+    def __init__(self, money, stock_name, strategy: Strategy):
+        self.model = LSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
+        self.data_prep = DataPrep()
         self.bought_stocks: Dict[str, StockData] = {}
         self.money = money
-        self.stocks_prices = stock_prices
+        self.stock_name = stock_name
+        self.stocks_prices = self.data_prep.read_and_parse_df(f'data/{stock_name}.csv', dt_from='2021-01-01')
+        print(self.stocks_prices)
         self.current_date = None
         self.strategy = strategy
         self.wallet_history = pd.DataFrame(columns=["Cash", "Stocks_value", "Total_value"], index=pd.to_datetime([]))
+
+        self.model.load_state_dict(torch.load(f'models/{self.stock_name}'))
 
     def buy_stock(self, stock_name, money_to_spend):
         """Buys stock with defined amount of money"""
         if(money_to_spend > self.money):
             raise Exception(f"Not enough money to buy {stock_name}")
 
-        actual_price = self.stocks_prices.loc[self.current_date]["Close"]
+        actual_price = self.stocks_prices.loc[self.current_date]["Price"]
         amount_of_stock = money_to_spend / actual_price
         self.money -= money_to_spend
 
@@ -73,7 +82,7 @@ class Trader:
     def sell_stock(self, stock_name, amount):
         """Sells amount of stocks"""
         if stock_name in self.bought_stocks:
-            actual_price = self.stocks_prices.loc[self.current_date]["Close"]
+            actual_price = self.stocks_prices.loc[self.current_date]["Price"]
             value = self.bought_stocks[stock_name].sub(amount, actual_price)
             self.money += value
             print(f"Sold {amount} of {stock_name} of value {value}")
@@ -91,7 +100,7 @@ class Trader:
         """Calcs actual wallet balance and saves into dataframe"""
         stocks_value = 0
         for stockname in self.bought_stocks.keys():
-            actual_price = self.stocks_prices.loc[self.current_date]["Close"]  # Temporary for only one stock
+            actual_price = self.stocks_prices.loc[self.current_date]["Price"]  # Temporary for only one stock
             stocks_value += self.bought_stocks[stockname].get_current_value(actual_price)
 
         balance = {"Cash": self.money, "Stocks_value": stocks_value, "Total_value": stocks_value + self.money}
@@ -105,7 +114,16 @@ class Trader:
             if history.shape[0] < TRAIN_PERIODS:
                 return None
             history_for_inference = history[-TRAIN_PERIODS:]
-            predictions = self.model(history_for_inference)
+            history_for_inference = self.data_prep.scale_data(history_for_inference.values)
+            
+            self.model.eval()
+            with torch.no_grad():
+                predictions, _ = self.model(history_for_inference)
+            
+            predictions = predictions.numpy()
+            predictions = predictions.reshape(-1, 1)
+            predictions = self.data_prep.scaler_price.inverse_transform(predictions)
+            print(predictions)
             self.make_decision(STOCK_NAME, predictions)
             self.calc_and_save_balance()
 
@@ -130,10 +148,8 @@ def plot_results(df):
            "b-")
     plt.savefig('plot_wallet', dpi=600)
 
-
 if __name__ == "__main__":
-    df = pd.read_csv('raw_data/AAAU.csv', index_col='Date', parse_dates=True)
-    trader = Trader(10000, df, MovingAvgStrategy(1, 5, 15))
-    trader.evaluate_strategy("2021-01-29")
+    trader = Trader(10000, 'WIL', TreshStrategy(0.01))
+    trader.evaluate_strategy("2021-02-10")
     print(trader.wallet_history)
     plot_results(trader.wallet_history)

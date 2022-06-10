@@ -12,11 +12,12 @@ from datetime import datetime
 
 NUM_EPOCHS = 200
 LEARNING_RATE = 0.002
+INPUT_SIZE = 2
 HIDDEN_SIZE = 50  # number of features in hidden state
 
 TRAIN_PERIODS = 20  # number of days used for training and infering
 TEST_PERIODS = 5  # number of days used for test and predict
-STOCK_NAME = "YPS"
+STOCK_NAME = "WIL"
 DF_PATH = f"data/{STOCK_NAME}.csv"
 
 
@@ -42,10 +43,8 @@ def plot_change_predictions(df, predictions):
     plt.savefig('price_changes', dpi=600)
 
 
-def plot_price_predictions(stock_name, predictions):
+def plot_price_predictions(df, predictions):
     """Applies predicted price changes to price value and plots it"""
-    df = pd.read_csv(f'raw_data/{stock_name}.csv', index_col='Date', parse_dates=True)
-    df = df["Close"]
     x = [dt.datetime.date(d) for d in df.index]
 
     predictions_price = []
@@ -76,7 +75,7 @@ def plot_price_predictions(stock_name, predictions):
 
 class Trainer():
     def __init__(self):
-        self.model = LSTM(input_size=2, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
+        self.model = LSTM(input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
 
@@ -102,9 +101,6 @@ class Trainer():
     def save(self, path):
         torch.save(self.model.state_dict(), path)
 
-    def load(self, path):
-        self.model.load_state_dict(torch.load(path))
-
     def cuda(self):
         self.model.cuda()
 
@@ -119,20 +115,18 @@ if __name__ == "__main__":
         data_prep.cuda()
         trainer.cuda()
 
-    data_prep.read_and_parse_df(DF_PATH)
+    data_prep.read_and_parse_df(DF_PATH, dt_to='2020-12-31')
     train, test = data_prep.train_test(TEST_PERIODS)
     train_scaled = data_prep.scale_data(train)
     x_train, y_train = data_prep.get_x_y_pairs(train_scaled, TRAIN_PERIODS, TEST_PERIODS)
 
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
-    model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
-    trainer.save(f'models/{model_name}')
-    trainer.load(f'models/{model_name}')
+    trainer.save(f'models/{STOCK_NAME}')
     predictions = trainer.predict(inference_period)
 
     predictions = predictions.cpu()
     predictions = np.array(predictions).reshape(-1, 1)
     predictions = data_prep.scaler_price.inverse_transform(predictions)
     plot_change_predictions(data_prep.df["Price %"], predictions)
-    plot_price_predictions(STOCK_NAME, predictions)
+    plot_price_predictions(data_prep.df["Price"], predictions)
