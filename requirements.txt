@@ -12,3 +12,5 @@ jupyter
 
 # NN
 torch==1.11.0
+
+pytest

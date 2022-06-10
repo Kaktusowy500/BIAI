@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
@@ -15,11 +16,12 @@ HIDDEN_SIZE = 50  # number of features in hidden state
 
 TRAIN_PERIODS = 20  # number of days used for training and infering
 TEST_PERIODS = 5  # number of days used for test and predict
+STOCK_NAME = "YPS"
+DF_PATH = f"data/{STOCK_NAME}.csv"
 
-DF_PATH = "data/YPS.csv"
 
-
-def plot_results(df, predictions):
+def plot_change_predictions(df, predictions):
+    """Plots predicted prices changes"""
     x = [dt.datetime.date(d) for d in df.index]
     fig = plt.figure(figsize=(10, 5))
     plt.title('Price change by day')
@@ -37,7 +39,39 @@ def plot_results(df, predictions):
             "r-",
             label='Predicted Values')
     plt.legend()
-    plt.savefig('plot ', dpi=600)
+    plt.savefig('price_changes', dpi=600)
+
+
+def plot_price_predictions(stock_name, predictions):
+    """Applies predicted price changes to price value and plots it"""
+    df = pd.read_csv(f'raw_data/{stock_name}.csv', index_col='Date', parse_dates=True)
+    df = df["Close"]
+    x = [dt.datetime.date(d) for d in df.index]
+
+    predictions_price = []
+    for ind, change in enumerate(predictions):
+        if ind == 0:
+            predictions_price.append(df[-len(predictions)] * (1 + change))
+        else:
+            predictions_price.append(predictions_price[ind - 1] * (1 + change))
+
+    fig = plt.figure(figsize=(10, 5))
+    plt.title('Price by day')
+    plt.ylabel('Price')
+    plt.grid(True)
+    plt.plot(x[:-len(predictions_price)],
+            df[:-len(predictions_price)],
+            "b-")
+    plt.plot(x[-len(predictions_price):],
+            df[-len(predictions_price):],
+            "b--",
+            label='True Values')
+    plt.plot(x[-len(predictions_price):],
+            predictions_price,
+            "r-",
+            label='Predicted Values')
+    plt.legend()
+    plt.savefig('price', dpi=600)
 
 
 class Trainer():
@@ -90,6 +124,7 @@ if __name__ == "__main__":
     train_scaled = data_prep.scale_data(train)
     x_train, y_train = data_prep.get_x_y_pairs(train_scaled, TRAIN_PERIODS, TEST_PERIODS)
 
+    trainer = Trainer()
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
     model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
@@ -100,4 +135,5 @@ if __name__ == "__main__":
     predictions = predictions.cpu()
     predictions = np.array(predictions).reshape(-1, 1)
     predictions = data_prep.scaler_price.inverse_transform(predictions)
-    plot_results(data_prep.df["Price %"], predictions)
+    plot_change_predictions(data_prep.df["Price %"], predictions)
+    plot_price_predictions(STOCK_NAME, predictions)
