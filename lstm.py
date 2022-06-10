@@ -11,18 +11,23 @@ class LSTM(nn.Module):
 
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM, self).__init__()
+
+        self.is_cuda = False
         self.hidden_size = hidden_size
 
         self.lstm = nn.LSTM(input_size, hidden_size)
-
         self.linear = nn.Linear(hidden_size, output_size)
 
     def forward(self, x, hidden=None):
         if hidden == None:
-            self.hidden = (torch.zeros(1, 1, self.hidden_size),
-                           torch.zeros(1, 1, self.hidden_size))
+            self.hidden = [torch.zeros(1, 1, self.hidden_size),
+                           torch.zeros(1, 1, self.hidden_size)]
         else:
             self.hidden = hidden
+
+        if self.is_cuda:
+            for i, hidden_layer in enumerate(self.hidden):
+                self.hidden[i] = hidden_layer.cuda()
 
         lstm_out, self.hidden = self.lstm(x.view(len(x), 1, -1),
                                           self.hidden)
@@ -30,3 +35,7 @@ class LSTM(nn.Module):
         predictions = self.linear(lstm_out.view(len(x), -1))
 
         return predictions[-1], self.hidden
+
+    def cuda(self):
+        self.is_cuda = True
+        self.to(device='cuda:0')

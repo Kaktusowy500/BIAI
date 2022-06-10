@@ -5,10 +5,12 @@ import torch.nn as nn
 import torch.optim as optim
 import datetime as dt
 import matplotlib.pyplot as plt
+
 from data_prep import DataPrep
 from lstm import LSTM
+from datetime import datetime
 
-NUM_EPOCHS = 400
+NUM_EPOCHS = 200
 LEARNING_RATE = 0.002
 HIDDEN_SIZE = 50  # number of features in hidden state
 
@@ -74,7 +76,7 @@ def plot_price_predictions(stock_name, predictions):
 
 class Trainer():
     def __init__(self):
-        self.model = LSTM(input_size=1, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
+        self.model = LSTM(input_size=2, hidden_size=HIDDEN_SIZE, output_size=TEST_PERIODS)
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
 
@@ -97,10 +99,26 @@ class Trainer():
             predictions, _ = self.model(data_period)
         return predictions
 
+    def save(self, path):
+        torch.save(self.model.state_dict(), path)
+
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path))
+
+    def cuda(self):
+        self.model.cuda()
+
 
 if __name__ == "__main__":
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     data_prep = DataPrep()
+    trainer= Trainer()
+
+    if torch.cuda.is_available():
+        data_prep.cuda()
+        trainer.cuda()
+
     data_prep.read_and_parse_df(DF_PATH)
     train, test = data_prep.train_test(TEST_PERIODS)
     train_scaled = data_prep.scale_data(train)
@@ -109,9 +127,13 @@ if __name__ == "__main__":
     trainer = Trainer()
     trainer.train(x_train, y_train)
     inference_period = train_scaled[-TRAIN_PERIODS:]
+    model_name = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
+    trainer.save(f'models/{model_name}')
+    trainer.load(f'models/{model_name}')
     predictions = trainer.predict(inference_period)
 
-    # Apply inverse transform to undo scaling
-    predictions = data_prep.scaler.inverse_transform(np.array(predictions.reshape(-1, 1)))
-    plot_change_predictions(data_prep.df, predictions)
+    predictions = predictions.cpu()
+    predictions = np.array(predictions).reshape(-1, 1)
+    predictions = data_prep.scaler_price.inverse_transform(predictions)
+    plot_change_predictions(data_prep.df["Price %"], predictions)
     plot_price_predictions(STOCK_NAME, predictions)
