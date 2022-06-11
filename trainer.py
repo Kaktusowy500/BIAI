@@ -40,7 +40,7 @@ def plot_change_predictions(df, predictions):
             "r-",
             label='Predicted Values')
     plt.legend()
-    plt.savefig('price_changes', dpi=600)
+    plt.savefig('plots/price_changes', dpi=600)
 
 
 def plot_price_predictions(df, predictions):
@@ -70,7 +70,7 @@ def plot_price_predictions(df, predictions):
             "r-",
             label='Predicted Values')
     plt.legend()
-    plt.savefig('price', dpi=600)
+    plt.savefig('plots/price', dpi=600)
 
 
 class Trainer():

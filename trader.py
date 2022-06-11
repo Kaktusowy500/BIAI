@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime as dt
 import torch
+from collections import OrderedDict
 
 from typing import Dict
 from model_mock import ModelMock
@@ -58,6 +59,7 @@ class Trader:
         print(self.stocks_prices)
         self.current_date = None
         self.strategy = strategy
+        self.predictions_history = []
         self.wallet_history = pd.DataFrame(columns=["Cash", "Stocks_value", "Total_value"], index=pd.to_datetime([]))
 
         self.model.load_state_dict(torch.load(f'models/{self.stock_name}'))
@@ -123,7 +125,22 @@ class Trader:
             predictions = predictions.numpy()
             predictions = predictions.reshape(-1, 1)
             predictions = self.data_prep.scaler_price.inverse_transform(predictions)
-            print(predictions)
+            predictions = predictions.ravel()
+
+            # Save prediction history
+            current_datetime = history.iloc[-2].name
+            dates = pd.date_range(start=current_datetime, periods=6, freq='B')
+            price_history = [history.iloc[-2]['Price'], history.iloc[-2]['Price'] * (1 + predictions[0])]
+
+            for i in range(1, len(predictions)):
+                print(i)
+                price_history.append(price_history[i - 1] * (1 + predictions[i]))
+
+            prediction_history = pd.DataFrame(columns=['Price'], index=pd.to_datetime(dates))
+            prediction_history['Price'] = price_history
+            self.predictions_history.append(prediction_history)
+
+            print('Predictions: ', predictions)
             self.make_decision(STOCK_NAME, predictions)
             self.calc_and_save_balance()
 
@@ -136,20 +153,39 @@ class Trader:
             print(self.current_date)
 
 
-def plot_results(df):
+def plot_wallet_history(df):
     """Total wallet value in time"""
     x = [dt.datetime.date(d) for d in df.index]
     fig = plt.figure(figsize=(10, 5))
+    plt.clf()
     plt.title('Total wallet value in time')
     plt.ylabel('Value')
     plt.grid(True)
     plt.plot(x,
            df["Total_value"].to_numpy(),
            "b-")
-    plt.savefig('plot_wallet', dpi=600)
+    plt.savefig('plots/plot_wallet', dpi=600)
+
+def plot_predictions_history(predictions_history):
+    plt.clf()
+    plt.title("Prediction history")
+    plt.grid(True)
+    plt.ylabel('Price')
+    plt.xlabel('Date')
+
+    for prediction in predictions_history:
+        x = [dt.datetime.date(d) for d in prediction.index]
+        plt.plot(x, prediction['Price'].to_numpy(), "b-", label='Predicted')
+
+    plt.plot(trader.stocks_prices['Price'], "r-", label='Real')
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = OrderedDict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
+    plt.savefig('plots/predictions_history', dpi=600)
 
 if __name__ == "__main__":
     trader = Trader(10000, 'WIL', TreshStrategy(0.01))
     trader.evaluate_strategy("2021-02-10")
     print(trader.wallet_history)
-    plot_results(trader.wallet_history)
+    plot_wallet_history(trader.wallet_history)
+    plot_predictions_history(trader.predictions_history)
