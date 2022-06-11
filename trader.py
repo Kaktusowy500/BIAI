@@ -1,16 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 import datetime as dt
 import torch
 from collections import OrderedDict
 
 from typing import Dict
-from model_mock import ModelMock
 from lstm import LSTM
-from trainer import TEST_PERIODS, TRAIN_PERIODS, HIDDEN_SIZE, INPUT_SIZE, Trainer
+from trainer import TEST_PERIODS, TRAIN_PERIODS, HIDDEN_SIZE, INPUT_SIZE
 from strategies import Strategy, TreshStrategy, Decision, MovingAvgStrategy
 from data_prep import DataPrep
+
+STOCK_NAME = "WIL"
+
 
 class StockData:
     def __init__(self, amount, price):
@@ -44,9 +45,6 @@ class StockData:
         return self.amount * curr_price
 
 
-STOCK_NAME = "AAAU"
-
-
 class Trader:
 
     def __init__(self, money, stock_name, strategy: Strategy):
@@ -56,7 +54,6 @@ class Trader:
         self.money = money
         self.stock_name = stock_name
         self.stocks_prices = self.data_prep.read_and_parse_df(f'data/{stock_name}.csv', dt_from='2021-01-01')
-        print(self.stocks_prices)
         self.current_date = None
         self.strategy = strategy
         self.predictions_history = []
@@ -117,11 +114,11 @@ class Trader:
                 return None
             history_for_inference = history[-TRAIN_PERIODS:]
             history_for_inference = self.data_prep.scale_data(history_for_inference.values)
-            
+
             self.model.eval()
             with torch.no_grad():
                 predictions, _ = self.model(history_for_inference)
-            
+
             predictions = predictions.numpy()
             predictions = predictions.reshape(-1, 1)
             predictions = self.data_prep.scaler_price.inverse_transform(predictions)
@@ -129,18 +126,16 @@ class Trader:
 
             # Save prediction history
             current_datetime = history.iloc[-2].name
-            dates = pd.date_range(start=current_datetime, periods=6, freq='B')
+            dates = pd.date_range(start=current_datetime, periods=TEST_PERIODS + 1, freq='B')
             price_history = [history.iloc[-2]['Price'], history.iloc[-2]['Price'] * (1 + predictions[0])]
 
             for i in range(1, len(predictions)):
-                print(i)
                 price_history.append(price_history[i - 1] * (1 + predictions[i]))
 
             prediction_history = pd.DataFrame(columns=['Price'], index=pd.to_datetime(dates))
             prediction_history['Price'] = price_history
             self.predictions_history.append(prediction_history)
 
-            print('Predictions: ', predictions)
             self.make_decision(STOCK_NAME, predictions)
             self.calc_and_save_balance()
 
@@ -166,6 +161,7 @@ def plot_wallet_history(df):
            "b-")
     plt.savefig('plots/plot_wallet', dpi=600)
 
+
 def plot_predictions_history(predictions_history):
     plt.clf()
     plt.title("Prediction history")
@@ -183,8 +179,9 @@ def plot_predictions_history(predictions_history):
     plt.legend(by_label.values(), by_label.keys())
     plt.savefig('plots/predictions_history', dpi=600)
 
+
 if __name__ == "__main__":
-    trader = Trader(10000, 'WIL', TreshStrategy(0.01))
+    trader = Trader(10000, STOCK_NAME, TreshStrategy(0.01))
     trader.evaluate_strategy("2021-02-10")
     print(trader.wallet_history)
     plot_wallet_history(trader.wallet_history)

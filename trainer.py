@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,7 +7,6 @@ import matplotlib.pyplot as plt
 
 from data_prep import DataPrep
 from lstm import LSTM
-from datetime import datetime
 
 NUM_EPOCHS = 200
 LEARNING_RATE = 0.002
@@ -109,7 +107,7 @@ if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     data_prep = DataPrep()
-    trainer= Trainer()
+    trainer = Trainer()
 
     if torch.cuda.is_available():
         data_prep.cuda()
